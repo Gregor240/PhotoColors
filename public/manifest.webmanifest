@@ -1,0 +1,17 @@
+{
+  "name": "PhotoColors",
+  "short_name": "PhotoColors",
+  "description": "移动端极简修图拼图 MVP",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#f4f2f9",
+  "theme_color": "#f4f2f9",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
