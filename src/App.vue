@@ -1,7 +1,15 @@
 <script setup lang="ts">
+import { Capacitor, registerPlugin } from '@capacitor/core'
 import { computed, nextTick, reactive, ref } from 'vue'
 
 type Layout = 'vertical' | 'horizontal'
+type GallerySaverPlugin = {
+  saveJpeg(options: { base64Data: string; fileName: string }): Promise<{ uri?: string }>
+}
+
+const GallerySaver = registerPlugin<GallerySaverPlugin>('GallerySaver')
+const exportStatus = ref('')
+
 
 const layout = ref<Layout>('vertical')
 const fileInput = ref<HTMLInputElement | null>(null)
@@ -228,8 +236,9 @@ const drawImageCover = (ctx: CanvasRenderingContext2D, img: HTMLImageElement, x:
   ctx.drawImage(img, dx, dy, drawW, drawH)
 }
 
-const downloadPNG = () => {
+ const saveJPG = async () => {
   if (!imageElement.value) return
+
   const width = layout.value === 'vertical' ? 1080 : 1480
   const height = layout.value === 'vertical' ? 1760 : 920
   const canvas = document.createElement('canvas')
@@ -289,12 +298,31 @@ const downloadPNG = () => {
   ctx.clip()
   drawImageCover(ctx, imageElement.value, photoArea.x, photoArea.y, photoArea.w, photoArea.h)
   ctx.restore()
+  
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.92)
+  const fileName = `photocolors-${Date.now()}.jpg`
+
+  if (Capacitor.isNativePlatform()) {
+    try {
+      await GallerySaver.saveJpeg({
+        base64Data: dataUrl.split(',')[1],
+        fileName
+      })
+      exportStatus.value = '已保存 JPG 到手机图库'
+      return
+    } catch (error) {
+      console.error(error)
+      exportStatus.value = '保存到图库失败，已改为下载 JPG'
+    }
+  }
 
   const a = document.createElement('a')
-  a.href = canvas.toDataURL('image/png')
-  a.download = 'photocolors-mvp.png'
+  a.href = dataUrl
+  a.download = fileName
   a.click()
+  exportStatus.value = '已导出 JPG'
 }
+
 </script>
 
 <template>
@@ -303,12 +331,12 @@ const downloadPNG = () => {
       <div class="title-block">
         <span class="eyebrow">PhotoColors</span>
         <h1>移动修图拼图 MVP</h1>
-        <p>导入照片后自动提取主色、亮色、暗色、辅助色，生成极简拼图并支持导出 PNG。</p>
+        <p>导入照片后自动提取主色、亮色、暗色、辅助色，生成极简拼图并支持保存JPG到图库。</p>
       </div>
       <div class="controls">
         <button type="button" class="button secondary" @click="openFile">导入本地图片</button>
         <button type="button" class="button secondary" @click="toggleLayout">切换{{ layoutLabel }}</button>
-        <button type="button" class="button primary" @click="downloadPNG" :disabled="!isReady">导出 PNG</button>
+        <button type="button" class="button primary" @click="saveJPG" :disabled="!isReady">保存JPG到图库</button>
       </div>
     </header>
 
